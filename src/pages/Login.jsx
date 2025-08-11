@@ -2,17 +2,18 @@ import React, { useState } from "react";
 import { useNavigate, Link } from "react-router-dom";
 import { FaUser, FaLock, FaSignInAlt, FaArrowLeft } from "react-icons/fa";
 import { toast } from "react-toastify";
+import axios from "axios";
 
 const Login = () => {
   const [formData, setFormData] = useState({
-    username: "",
+    email: "",
     password: "",
     role: "client", // Default role
   });
   const [isLoading, setIsLoading] = useState(false);
   const navigate = useNavigate();
 
-  const { username, password, role } = formData;
+  const { email, password, role } = formData;
 
   const handleChange = (e) => {
     setFormData({
@@ -25,7 +26,7 @@ const Login = () => {
     e.preventDefault();
 
     // Basic validation
-    if (!username || !password) {
+    if (!email || !password || !role) {
       toast.error("Please fill in all fields");
       return;
     }
@@ -34,18 +35,16 @@ const Login = () => {
       setIsLoading(true);
 
       // Call the login API
-      const response = await authAPI.login({
-        username,
-        password,
-      });
-
+      const response = await axios.post('http://localhost:3000/api/login', {email, password, role})
+console.log(response)
+const token = response.data.token;
       // Save token to localStorage
-      localStorage.setItem("token", response.token);
+      localStorage.setItem("token", token);
 
       // Redirect based on role
-      if (response.user.role === "client") {
+      if (role === "Client") {
         navigate("/client/dashboard");
-      } else if (response.user.role === "agency") {
+      } else if (role === "Agency") {
         navigate("/agency/dashboard");
       }
 
@@ -92,7 +91,7 @@ const Login = () => {
           <form className="space-y-6" onSubmit={handleSubmit}>
             <div>
               <label
-                htmlFor="username"
+                htmlFor="email"
                 className="block text-sm font-medium text-gray-700"
               >
                 Email address
@@ -102,12 +101,12 @@ const Login = () => {
                   <FaUser className="h-5 w-5 text-gray-400" />
                 </div>
                 <input
-                  id="username"
-                  name="username"
+                  id="email"
+                  name="email"
                   type="email"
                   autoComplete="email"
                   required
-                  value={username}
+                  value={email}
                   onChange={handleChange}
                   className="pl-10 block w-full border border-gray-300 rounded-md py-2 px-3 focus:outline-none focus:ring-purple-500 focus:border-purple-500"
                   placeholder="you@example.com"

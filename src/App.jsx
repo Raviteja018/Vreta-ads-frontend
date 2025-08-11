@@ -79,8 +79,10 @@ const AppLayout = () => {
             <Route path="/login" element={<Login />} />
             <Route path="/signup" element={<Register />} />
             <Route path="/register" element={<GetStarted />} />
-            <Route path="/register/client" element={<ClientForm />} />
-            <Route path="/register/agency" element={<AgencyForm />} />
+            <Route path="/client/register" element={<ClientForm />} />
+            <Route path="/client/dashboard" element={<ClientDashboard />} />
+            <Route path="/agency/register" element={<AgencyForm />} />
+            <Route path="/agency/dashboard" element={<AgencyDashboard />} />
             <Route path="/pending-approval" element={<PendingApproval />} />
 
             {/* Protected routes */}

@@ -6,17 +6,15 @@ import {
   FaBuilding,
   FaUserTie,
 } from "react-icons/fa";
-import ClientForm from "./get-started/ClientForm";
-import AgencyForm from "./get-started/AgencyForm";
 
 const GetStarted = () => {
   const navigate = useNavigate();
 
   const handleRoleSelect = (role) => {
     if (role === "client") {
-      navigate("/register/client");
+      navigate("/client/register");
     } else if (role === "agency") {
-      navigate("/register/agency");
+      navigate("/agency/register");
     }
   };
 

@@ -9,12 +9,9 @@ const AgencyForm = ({ onSubmitSuccess }) => {
     email: '',
     agencyName: '',
     phone: '',
-    address: '',
-    website: '',
-    teamSize: '',
-    services: '',
+    agencyAddress: '',
+    agencyWebsite: '',
     password: '',
-    // confirmPassword: ''
   });
   const [isSubmitting, setIsSubmitting] = useState(false);
   const navigate = useNavigate();
@@ -44,23 +41,18 @@ const AgencyForm = ({ onSubmitSuccess }) => {
     try {
       setIsSubmitting(true);
       const payload = {
-        username: formData.email, // Using email as username
+        fullname: formData.name,
+        email: formData.email,
+        agencyName: formData.agencyName,
+        phone: formData.phone,
+        agencyAddress: formData.agencyAddress,
+        agencyWebsite: formData.agencyWebsite,
         password: formData.password,
-        role: 'agency',
-        // Additional fields can be stored in user profile
-        profile: {
-          name: formData.name,
-          agencyName: formData.agencyName,
-          phone: formData.phone,
-          address: formData.address,
-          website: formData.website,
-          teamSize: formData.teamSize,
-          services: formData.services
-        }
       };
 
       toast.success('Registration successful! Please login to continue.');
       onSubmitSuccess();
+      navigate('/agency/login');
     } catch (error) {
       console.error('Registration error:', error);
       const message = error.response?.data?.message || 'Registration failed. Please try again.';
@@ -149,8 +141,8 @@ const AgencyForm = ({ onSubmitSuccess }) => {
             <FaMapMarkerAlt className="text-gray-400" />
           </div>
           <textarea
-            name="address"
-            value={formData.address}
+            name="agencyAddress"
+            value={formData.agencyAddress}
             onChange={handleChange}
             placeholder="Agency Address"
             rows="2"
@@ -165,8 +157,8 @@ const AgencyForm = ({ onSubmitSuccess }) => {
           </div>
           <input
             type="url"
-            name="website"
-            value={formData.website}
+            name="  agencyWebsite"
+            value={formData.agencyWebsite}
             onChange={handleChange}
             placeholder="Website URL (optional)"
             className="pl-10 w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-600 focus:border-transparent"
@@ -184,18 +176,6 @@ const AgencyForm = ({ onSubmitSuccess }) => {
             required
           />
         </div>
-
-        {/* <div className="relative">
-          <input
-            type="password"
-            name="confirmPassword"
-            value={formData.confirmPassword}
-            onChange={handleChange}
-            placeholder="Confirm Password"
-            className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-600 focus:border-transparent"
-            required
-          />
-        </div> */}
 
         <button
           type="submit"
