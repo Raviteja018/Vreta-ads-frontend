@@ -98,7 +98,7 @@ const Login = () => {
     <div className="relative min-h-screen bg-gray-50 flex flex-col justify-center py-0 sm:py-6 sm:px-4 lg:px-8">
       {/* Responsive Back Button */}
       <button
-        onClick={() => navigate(-1)}
+        onClick={() => navigate("/")}
         className="fixed sm:absolute top-4 left-4 sm:top-24 sm:left-12 bg-white text-purple-600 border border-purple-100 shadow hover:bg-purple-50 transition-all px-4 py-2 rounded-full flex items-center space-x-2 z-10"
       >
         <FaArrowLeft />

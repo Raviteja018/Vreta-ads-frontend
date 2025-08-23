@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useCallback } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { advertisementAPI, applicationAPI } from "../services/api";
 import { useAuth } from "../contexts/AuthContext";
 import {
@@ -17,6 +18,7 @@ import {
   FaCheck,
   FaExclamationTriangle,
   FaClock,
+  FaHome,
 } from 'react-icons/fa';
 import { ToastContainer, toast } from 'react-toastify';
 import 'react-toastify/dist/ReactToastify.css';
@@ -38,7 +40,8 @@ const categories = [
 ];
 
 const ClientDashboard = () => {
-  const { user, isAuthenticated } = useAuth();
+  const { user, isAuthenticated, logout } = useAuth();
+  const navigate = useNavigate();
   
   const [advertisements, setAdvertisements] = useState([]);
   const [applications, setApplications] = useState([]);
@@ -68,6 +71,12 @@ const ClientDashboard = () => {
     productImage: null,
     imagePreview: '',
   });
+
+  const handleBackToHome = () => {
+    logout();
+    navigate('/');
+    toast.success('Logged out successfully! Welcome back to Vreta Ads.');
+  };
 
   // Fetch advertisements from API
   const fetchAdvertisements = useCallback(async () => {
@@ -366,15 +375,25 @@ const ClientDashboard = () => {
             <h1 className="text-2xl md:text-3xl font-bold text-gray-900 mb-1">Client Dashboard</h1>
             <p className="text-gray-600">Welcome back, {user?.name || 'User'}! Manage your advertisements and applications.</p>
           </div>
-          {activeTab === 'advertisements' && (
+          <div className="flex items-center space-x-3">
             <button
-              onClick={toggleForm}
-              className="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md shadow-sm text-white bg-purple-600 hover:bg-purple-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-purple-500"
+              onClick={handleBackToHome}
+              className="inline-flex items-center px-4 py-2.5 bg-white border border-gray-300 hover:border-gray-400 text-gray-700 font-medium rounded-lg shadow-sm hover:shadow-md transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-gray-300 focus:border-gray-400"
+              title="Logout and return to home"
             >
-              <FaPlus className="-ml-1 mr-2 h-4 w-4" />
-              {formVisible ? 'Close Form' : 'New Advertisement'}
+              <FaHome className="mr-2 h-4 w-4 text-gray-600" />
+              Home
             </button>
-          )}
+            {activeTab === 'advertisements' && (
+              <button
+                onClick={toggleForm}
+                className="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md shadow-sm text-white bg-purple-600 hover:bg-purple-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-purple-500"
+              >
+                <FaPlus className="-ml-1 mr-2 h-4 w-4" />
+                {formVisible ? 'Close Form' : 'New Advertisement'}
+              </button>
+            )}
+          </div>
         </div>
 
         {/* Tab Navigation */}

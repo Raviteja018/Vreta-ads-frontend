@@ -2,12 +2,14 @@ import axios from "axios";
 import React, { useState } from "react";
 import { useNavigate, Link } from "react-router-dom";
 import { toast } from "react-toastify";
+import { useAuth } from "../../contexts/AuthContext";
 
 const AdminLoginPage = () => {
   const [username, setUsername] = useState("");
   const [password, setPassword] = useState("");
   const [isLoading, setIsLoading] = useState(false);
   const navigate = useNavigate();
+  const { login } = useAuth();
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -26,6 +28,16 @@ const AdminLoginPage = () => {
       console.log(response)
 
       if (response.data.role === "admin") {
+        // Use AuthContext to store user data and token
+        const userData = {
+          id: response.data._id,
+          username: response.data.username,
+          role: response.data.role,
+          token: response.data.token
+        };
+        
+        login(userData);
+        toast.success("Admin login successful!");
         navigate("/admin");
       } else {
         toast.error("You do not have admin privileges");

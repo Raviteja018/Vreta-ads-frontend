@@ -19,7 +19,8 @@ export const AuthProvider = ({children}) => {
         try {
           const userData = JSON.parse(storedUser);
           // Basic validation - check if token and user data exist
-          if (userData.id && userData.token) {
+          // Handle both 'id' and '_id' fields for compatibility
+          if ((userData.id || userData._id) && userData.token && userData.token === token) {
             console.log("AuthContext: Valid user data found, setting user");
             setUser(userData);
           } else {
@@ -48,6 +49,7 @@ export const AuthProvider = ({children}) => {
     console.log("AuthContext: Login called with:", userData);
     setUser(userData);
     localStorage.setItem('user', JSON.stringify(userData));
+    localStorage.setItem('token', userData.token); // Store token separately
     console.log("AuthContext: User state updated, new state:", userData);
   }
 
@@ -67,13 +69,15 @@ export const AuthProvider = ({children}) => {
     
     try {
       const user = JSON.parse(userData);
-      return !!(user.id && user.token);
+      // Check for either 'id' or '_id' to handle different data structures
+      return !!(user.id || user._id) && user.token;
     } catch {
       return false;
     }
   }
   
-  const isAuthenticated = checkAuth();
+  // Make isAuthenticated reactive to user state changes
+  const isAuthenticated = !!user;
   
   return(
     <AuthContext.Provider value={{

@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useCallback } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { advertisementAPI, applicationAPI } from "../services/api";
 import { useAuth } from "../contexts/AuthContext";
 import {
@@ -13,6 +14,7 @@ import {
   FaTimes as FaReject,
   FaClock,
   FaEdit,
+  FaHome,
 } from 'react-icons/fa';
 import { ToastContainer, toast } from 'react-toastify';
 import 'react-toastify/dist/ReactToastify.css';
@@ -23,7 +25,8 @@ const categories = [
 ];
 
 const AgencyDashboard = () => {
-  const { user, isAuthenticated } = useAuth();
+  const { user, isAuthenticated, logout } = useAuth();
+  const navigate = useNavigate();
   
   const [advertisements, setAdvertisements] = useState([]);
   const [myApplications, setMyApplications] = useState([]);
@@ -70,6 +73,12 @@ const AgencyDashboard = () => {
       setIsLoading(false);
     }
   }, []);
+
+  const handleBackToHome = () => {
+    logout();
+    navigate('/');
+    toast.success('Logged out successfully! Welcome back to Vreta Ads.');
+  };
 
   const fetchMyApplications = useCallback(async () => {
     try {
@@ -194,23 +203,9 @@ const AgencyDashboard = () => {
     }
   }, [isAuthenticated, fetchAdvertisements, fetchMyApplications]);
 
-  // Refresh applications every 10 seconds to get updated advertisement statuses
-  useEffect(() => {
-    if (!isAuthenticated) return;
-    
-    const interval = setInterval(() => {
-      fetchMyApplications();
-    }, 10000); // 10 seconds
-    
-    return () => clearInterval(interval);
-  }, [isAuthenticated, fetchMyApplications]);
 
-  // Refresh applications when applications tab is activated
-  useEffect(() => {
-    if (activeTab === 'applications' && isAuthenticated) {
-      fetchMyApplications();
-    }
-  }, [activeTab, isAuthenticated, fetchMyApplications]);
+
+
 
   useEffect(() => {
     let filtered = advertisements;
@@ -255,8 +250,20 @@ const AgencyDashboard = () => {
     <div className="min-h-screen bg-gray-50">
       <div className="container mx-auto px-4 py-8">
         <div className="mb-6">
-          <h1 className="text-2xl md:text-3xl font-bold text-gray-900 mb-1">Agency Dashboard</h1>
-          <p className="text-gray-600">Welcome back, {user?.name || 'User'}! Browse advertisements and manage your applications.</p>
+          <div className="flex justify-between items-start">
+            <div>
+              <h1 className="text-2xl md:text-3xl font-bold text-gray-900 mb-1">Agency Dashboard</h1>
+              <p className="text-gray-600">Welcome back, {user?.name || 'User'}! Browse advertisements and manage your applications.</p>
+            </div>
+            <button
+              onClick={handleBackToHome}
+              className="inline-flex items-center px-4 py-2.5 bg-white border border-gray-300 hover:border-gray-400 text-gray-700 font-medium rounded-lg shadow-sm hover:shadow-md transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-gray-300 focus:border-gray-400"
+              title="Logout and return to home"
+            >
+              <FaHome className="mr-2 h-4 w-4 text-gray-600" />
+              Home
+            </button>
+          </div>
         </div>
 
         <div className="bg-white rounded-lg shadow-md mb-6">
@@ -787,16 +794,7 @@ const AgencyDashboard = () => {
                           </div>
                         </div>
                         
-                        {/* Status Update Note */}
-                        <div className="p-3 bg-blue-50 border border-blue-200 rounded-md">
-                          <div className="flex items-center space-x-2 text-xs text-blue-700">
-                            <span className="animate-pulse">🔄</span>
-                            <span className="font-medium">Auto-refresh:</span>
-                            <span>Advertisement status updates every 10 seconds</span>
-                            <span className="text-blue-600 font-semibold">•</span>
-                            <span>Use refresh button above for immediate update</span>
-                          </div>
-                        </div>
+
                       </div>
                       
                       {/* Application Details */}
