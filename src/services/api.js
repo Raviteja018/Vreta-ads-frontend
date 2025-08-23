@@ -28,28 +28,100 @@ api.interceptors.response.use(
 
 // Advertisement endpoints
 export const advertisementAPI = {
-  getAll: () => api.get(API_CONFIG.ENDPOINTS.ADVERTISEMENTS),
+  getAll: () => {
+    const token = localStorage.getItem('token');
+    console.log('API getAll called with token:', token ? 'Present' : 'Missing');
+    console.log('API endpoint:', API_CONFIG.ENDPOINTS.ADVERTISEMENTS);
+    return api.get(API_CONFIG.ENDPOINTS.ADVERTISEMENTS, {
+      headers: {
+        'Authorization': `Bearer ${token}`
+      },
+    });
+  },
+  getPublic: () => {
+    // Get public advertisements without authentication
+    return api.get(`${API_CONFIG.ENDPOINTS.ADVERTISEMENTS}/public`);
+  },
   getById: (id) => api.get(`${API_CONFIG.ENDPOINTS.ADVERTISEMENTS}/${id}`),
-  create: (formData) => api.post(API_CONFIG.ENDPOINTS.ADVERTISEMENTS, formData, {
-    headers: {
-      'Content-Type': 'multipart/form-data',
-    },
-  }),
-  update: (id, formData) => api.put(`${API_CONFIG.ENDPOINTS.ADVERTISEMENTS}/${id}`, formData, {
-    headers: {
-      'Content-Type': 'multipart/form-data',
-    },
-  }),
-  delete: (id) => api.delete(`${API_CONFIG.ENDPOINTS.ADVERTISEMENTS}/${id}`),
+  create: (formData) => {
+    const token = localStorage.getItem('token');
+    return api.post(API_CONFIG.ENDPOINTS.ADVERTISEMENTS, formData, {
+      headers: {
+        'Content-Type': 'multipart/form-data',
+        'Authorization': `Bearer ${token}`
+      },
+    });
+  },
+  update: (id, formData) => {
+    const token = localStorage.getItem('token');
+    return api.put(`${API_CONFIG.ENDPOINTS.ADVERTISEMENTS}/${id}`, formData, {
+      headers: {
+        'Content-Type': 'multipart/form-data',
+        'Authorization': `Bearer ${token}`
+      },
+    });
+  },
+  updateStatus: (id, status) => {
+    const token = localStorage.getItem('token');
+    return api.patch(`${API_CONFIG.ENDPOINTS.ADVERTISEMENTS}/${id}/status`, { status }, {
+      headers: {
+        'Authorization': `Bearer ${token}`
+      },
+    });
+  },
+  delete: (id) => {
+    const token = localStorage.getItem('token');
+    return api.delete(`${API_CONFIG.ENDPOINTS.ADVERTISEMENTS}/${id}`, {
+      headers: {
+        'Authorization': `Bearer ${token}`
+      },
+    });
+  },
 };
 
 // Application endpoints
 export const applicationAPI = {
-  create: (appData) => api.post(API_CONFIG.ENDPOINTS.APPLICATIONS, appData),
+  create: (appData) => {
+    const token = localStorage.getItem('token');
+    return api.post(API_CONFIG.ENDPOINTS.APPLICATIONS, appData, {
+      headers: {
+        'Authorization': `Bearer ${token}`
+      },
+    });
+  },
   getByAdvertisementId: (adId) => api.get(`${API_CONFIG.ENDPOINTS.APPLICATIONS}/advertisement/${adId}`),
-  getByClient: () => api.get(`${API_CONFIG.ENDPOINTS.APPLICATIONS}/client`),
-  getByAgency: () => api.get(`${API_CONFIG.ENDPOINTS.APPLICATIONS}/agency`),
-  updateStatus: (id, status) => api.patch(`${API_CONFIG.ENDPOINTS.APPLICATIONS}/${id}`, { status }),
+  getByClient: () => {
+    const token = localStorage.getItem('token');
+    return api.get(`${API_CONFIG.ENDPOINTS.APPLICATIONS}/client`, {
+      headers: {
+        'Authorization': `Bearer ${token}`
+      },
+    });
+  },
+  getByAgency: () => {
+    const token = localStorage.getItem('token');
+    return api.get(`${API_CONFIG.ENDPOINTS.APPLICATIONS}/agency`, {
+      headers: {
+        'Authorization': `Bearer ${token}`
+      },
+    });
+  },
+  updateStatus: (id, status) => {
+    const token = localStorage.getItem('token');
+    return api.patch(`${API_CONFIG.ENDPOINTS.APPLICATIONS}/${id}`, { status }, {
+      headers: {
+        'Authorization': `Bearer ${token}`
+      },
+    });
+  },
+          refreshAll: () => {
+          const token = localStorage.getItem('token');
+          return api.get(`${API_CONFIG.ENDPOINTS.APPLICATIONS}/refresh/all-applications`, {
+            headers: {
+              'Authorization': `Bearer ${token}`
+            },
+          });
+        },
   getById: (id) => api.get(`${API_CONFIG.ENDPOINTS.APPLICATIONS}/${id}`),
 };
 

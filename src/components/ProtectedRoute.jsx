@@ -5,6 +5,15 @@ import { useAuth } from '../contexts/AuthContext';
 const ProtectedRoute = ({ children, requiredRole = null }) => {
   const { currentUser, loading } = useAuth();
   const location = useLocation();
+  
+  console.log("ProtectedRoute Debug:", {
+    currentUser,
+    loading,
+    requiredRole,
+    location: location.pathname,
+    isApproved: currentUser?.isApproved,
+    isApprovedType: typeof currentUser?.isApproved
+  });
 
   if (loading) {
     return (
@@ -28,7 +37,8 @@ const ProtectedRoute = ({ children, requiredRole = null }) => {
   }
 
   // If user is not approved (and not an admin), redirect to pending approval page
-  if (!currentUser.isApproved && currentUser.role !== 'admin') {
+  // Only check isApproved if the field exists, otherwise assume approved
+  if (currentUser.isApproved === false && currentUser.role !== 'admin') {
     return <Navigate to="/pending-approval" replace />;
   }
 

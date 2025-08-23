@@ -5,16 +5,53 @@ import { useAuth } from '../src/contexts/AuthContext';
 import AdminLoginButton from '../src/components/AdminLoginButton';
 
 export default function HeroSection() {
-  const {user} = useAuth();
+  const {user, isAuthenticated, loading, logout} = useAuth();
   const navigate = useNavigate();
+  
+  // Debug logging
+  console.log("HeroSection Auth State:", { user, isAuthenticated, loading });
+  
   const handlePostProject = () => {
-    if(!user || user.role !== 'client') return navigate('/login');
-    navigate('/client-dashboard');
+    console.log("Post Project clicked - Auth state:", { user, isAuthenticated, loading });
+    
+    if(loading) {
+      console.log("Still loading, returning early");
+      return;
+    }
+    
+    if(!isAuthenticated || !user) {
+      console.log("Not authenticated, navigating to login");
+      navigate('/login');
+      return;
+    }
+    
+    // Check if user is a client
+    if(user.role === 'client') {
+      console.log("User is client, navigating to client dashboard");
+      navigate('/client/dashboard');
+    } else {
+      console.log("User is not client, showing alert");
+      alert('Only clients can post projects. Please log in with a client account.');
+    }
   }
 
   const handleBrowseProjects = () => { 
-    if(!user || user.role !== 'agency') return navigate('/login');
-    navigate('/agency-dashboard');
+    console.log("Browse Projects clicked - Auth state:", { user, isAuthenticated, loading });
+    
+    if(loading) {
+      console.log("Still loading, returning early");
+      return;
+    }
+    
+    if(!isAuthenticated || !user) {
+      console.log("Not authenticated, navigating to login");
+      navigate('/login');
+      return;
+    }
+    
+    console.log("User is authenticated, navigating to agency dashboard");
+    // If logged in (either as client or agency), go to agency dashboard to browse
+    navigate('/agency/dashboard');
   }
   return (
     <section className="text-center py-20 bg-gray-50 px-4">
@@ -51,6 +88,8 @@ export default function HeroSection() {
       
       <div className="mt-4">
         <AdminLoginButton />
+
+      
       </div>
     </section>
   );

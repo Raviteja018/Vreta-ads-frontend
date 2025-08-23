@@ -3,6 +3,7 @@ import { useNavigate, Link } from "react-router-dom";
 import { FaUser, FaLock, FaSignInAlt, FaArrowLeft } from "react-icons/fa";
 import { toast } from "react-toastify";
 import axios from "axios";
+import { useAuth } from "../contexts/AuthContext";
 
 const Login = () => {
   const [formData, setFormData] = useState({
@@ -12,6 +13,7 @@ const Login = () => {
   });
   const [isLoading, setIsLoading] = useState(false);
   const navigate = useNavigate();
+  const { login } = useAuth();
 
   const { email, password, role } = formData;
 
@@ -36,16 +38,49 @@ const Login = () => {
 
       // Call the login API
       const response = await axios.post('http://localhost:3000/api/login', {email, password, role})
-console.log(response)
-const token = response.data.token;
-      // Save token to localStorage
+      console.log("Full response:", response);
+      console.log("Response data:", response.data);
+      console.log("Response data keys:", Object.keys(response.data));
+      
+      const token = response.data.token;
+      const userData = {
+        id: response.data.id,
+        name: response.data.name,
+        role: response.data.role,
+        token: token
+      };
+      
+      console.log("User data being created:", userData);
+      console.log("Role from response.data.role:", response.data.role);
+      console.log("Role type:", typeof response.data.role);
+      
+      // Save token and user data to localStorage and update AuthContext
       localStorage.setItem("token", token);
+      login(userData);
 
-      // Redirect based on role
-      if (role === "Client") {
+      // Redirect based on role from API response
+      const userRole = response.data.role;
+      console.log("User role from API:", userRole);
+      console.log("Attempting to navigate to:", userRole === "client" ? "/client/dashboard" : "/agency/dashboard");
+      
+      if (userRole === "client") {
+        console.log("Navigating to client dashboard...");
+        console.log("Current URL before navigation:", window.location.href);
         navigate("/client/dashboard");
-      } else if (role === "Agency") {
+        console.log("Navigation called");
+        // Force a small delay to see if navigation happens
+        setTimeout(() => {
+          console.log("URL after navigation:", window.location.href);
+        }, 100);
+      } else if (userRole === "agency") {
+        console.log("Navigating to agency dashboard...");
+        console.log("Current URL before navigation:", window.location.href);
         navigate("/agency/dashboard");
+        console.log("Navigation called");
+        // Force a small delay to see if navigation happens
+        setTimeout(() => {
+          console.log("URL after navigation:", window.location.href);
+        }, 100);
       }
 
       toast.success("Login successful!");

@@ -77,7 +77,7 @@ const ClientForm = ({ onSubmitSuccess }) => {
 
       toast.success(response.data.message || "Registration successful! Please login to continue.");
       onSubmitSuccess?.();
-      navigate("/client/login");
+      navigate("/login");
     } catch (error) {
       console.error("Registration error:", error);
       console.log("Error response:", error.response?.data);

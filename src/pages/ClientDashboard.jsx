@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { advertisementAPI, applicationAPI } from "../services/api";
 import { useAuth } from "../contexts/AuthContext";
 import {
@@ -16,6 +16,7 @@ import {
   FaAd,
   FaCheck,
   FaExclamationTriangle,
+  FaClock,
 } from 'react-icons/fa';
 import { ToastContainer, toast } from 'react-toastify';
 import 'react-toastify/dist/ReactToastify.css';
@@ -38,6 +39,7 @@ const categories = [
 
 const ClientDashboard = () => {
   const { user, isAuthenticated } = useAuth();
+  
   const [advertisements, setAdvertisements] = useState([]);
   const [applications, setApplications] = useState([]);
   const [isLoading, setIsLoading] = useState(true);
@@ -61,17 +63,25 @@ const ClientDashboard = () => {
     targetAudience: '',
     budget: '',
     campaignDuration: '1 month',
-    category: 'general',
+    category: 'other',
     keyFeatures: '',
     productImage: null,
     imagePreview: '',
   });
 
   // Fetch advertisements from API
-  const fetchAdvertisements = async () => {
+  const fetchAdvertisements = useCallback(async () => {
     try {
+      console.log('Starting to fetch advertisements...');
+      console.log('Current user:', user);
+      console.log('Token from localStorage:', localStorage.getItem('token'));
+      console.log('User from localStorage:', localStorage.getItem('user'));
+      
       setIsLoading(true);
       const response = await advertisementAPI.getAll();
+      console.log('Advertisement API response:', response);
+      console.log('Response data:', response.data);
+      console.log('Advertisements array:', response.data.data || []);
       setAdvertisements(response.data.data || []);
     } catch (error) {
       console.error('Error fetching advertisements:', error);
@@ -79,10 +89,10 @@ const ClientDashboard = () => {
     } finally {
       setIsLoading(false);
     }
-  };
+  }, [user]);
 
   // Fetch applications for client
-  const fetchApplications = async () => {
+  const fetchApplications = useCallback(async () => {
     try {
       const response = await applicationAPI.getByClient();
       setApplications(response.data.data || []);
@@ -90,7 +100,7 @@ const ClientDashboard = () => {
       console.error('Error fetching applications:', error);
       toast.error('Failed to load applications');
     }
-  };
+  }, []);
 
   // Handle form input changes
   const handleChange = (e) => {
@@ -144,10 +154,12 @@ const ClientDashboard = () => {
       Object.entries(formData).forEach(([key, value]) => {
         if (value !== null && value !== '') {
           if (key === 'keyFeatures' && value) {
-            formDataToSend.append(
-              key,
-              JSON.stringify(value.split(',').map((feature) => feature.trim()).filter(Boolean))
-            );
+            // Split by comma, trim whitespace, and filter empty values
+            const features = value.split(',').map((feature) => feature.trim()).filter(Boolean);
+            // Add each feature as a separate field
+            features.forEach((feature, index) => {
+              formDataToSend.append(`keyFeatures[${index}]`, feature);
+            });
           } else if (key !== 'imagePreview') {
             formDataToSend.append(key, value);
           }
@@ -187,7 +199,7 @@ const ClientDashboard = () => {
       targetAudience: '',
       budget: '',
       campaignDuration: '1 month',
-      category: 'general',
+      category: 'other',
       keyFeatures: '',
       productImage: null,
       imagePreview: '',
@@ -211,7 +223,7 @@ const ClientDashboard = () => {
       targetAudience: ad.targetAudience || '',
       budget: ad.budget || '',
       campaignDuration: ad.campaignDuration || '1 month',
-      category: ad.category || 'general',
+      category: ad.category || 'other',
       keyFeatures: Array.isArray(ad.keyFeatures) ? ad.keyFeatures.join(', ') : ad.keyFeatures || '',
       productImage: null,
       imagePreview: ad.imageUrl || '',
@@ -243,9 +255,26 @@ const ClientDashboard = () => {
         prev.map((app) => (app._id === applicationId ? { ...app, status } : app))
       );
       toast.success(`Application ${status} successfully!`);
+      
+      // Refresh applications to get updated data
+      fetchApplications();
     } catch (error) {
       console.error('Error updating application status:', error);
       toast.error('Failed to update application status');
+    }
+  };
+
+  // Handle advertisement status update
+  const handleStatusUpdate = async (advertisementId, status) => {
+    try {
+      await advertisementAPI.updateStatus(advertisementId, status);
+      setAdvertisements((prev) =>
+        prev.map((ad) => (ad._id === advertisementId ? { ...ad, status } : ad))
+      );
+      toast.success(`Advertisement ${status} successfully!`);
+    } catch (error) {
+      console.error('Error updating advertisement status:', error);
+      toast.error('Failed to update advertisement status');
     }
   };
 
@@ -280,14 +309,22 @@ const ClientDashboard = () => {
 
   // Fetch data on component mount and when tab changes
   useEffect(() => {
+    console.log("ClientDashboard useEffect - isAuthenticated:", isAuthenticated);
     if (isAuthenticated) {
+      console.log("Fetching data...");
       fetchAdvertisements();
       fetchApplications();
+    } else {
+      console.log("Not authenticated, skipping data fetch");
     }
-  }, [isAuthenticated]);
+  }, [isAuthenticated, fetchAdvertisements, fetchApplications]);
 
   // Filter advertisements when data, search term, or filters change
   useEffect(() => {
+    console.log('Filtering advertisements. Original count:', advertisements.length);
+    console.log('Search term:', searchTerm);
+    console.log('Filters:', filters);
+    
     let filtered = advertisements;
 
     // Search filter
@@ -317,6 +354,7 @@ const ClientDashboard = () => {
       filtered = filtered.filter((ad) => ad.budget <= parseFloat(filters.maxBudget));
     }
 
+    console.log('Filtered count:', filtered.length);
     setFilteredAdvertisements(filtered);
   }, [searchTerm, filters, advertisements]);
 
@@ -820,28 +858,65 @@ const ClientDashboard = () => {
                       </div>
                     )}
 
-                    <div className="mt-4 flex justify-between items-center">
-                      <div className="flex items-center text-sm text-gray-500">
-                        <FaUserFriends className="mr-1" />
-                        {ad.targetAudience || 'No target set'}
-                      </div>
-                      <div className="flex space-x-2">
-                        <button
-                          onClick={() => handleEdit(ad)}
-                          className="p-1.5 text-gray-500 hover:text-purple-600 focus:outline-none"
-                          title="Edit"
-                        >
-                          <FaEdit className="h-4 w-4" />
-                        </button>
-                        <button
-                          onClick={() => handleDelete(ad._id)}
-                          className="p-1.5 text-gray-500 hover:text-red-600 focus:outline-none"
-                          title="Delete"
-                        >
-                          <FaTrash className="h-4 w-4" />
-                        </button>
-                      </div>
-                    </div>
+                                         <div className="mt-4 flex flex-col sm:flex-row sm:justify-between sm:items-center space-y-3 sm:space-y-0">
+                       <div className="flex items-center text-sm text-gray-500">
+                         <FaUserFriends className="mr-1" />
+                         {ad.targetAudience || 'No target set'}
+                       </div>
+                       <div className="flex flex-wrap gap-2">
+                         {ad.status === 'draft' && (
+                           <button
+                             onClick={() => handleStatusUpdate(ad._id, 'active')}
+                             className="inline-flex items-center px-2 sm:px-3 py-1.5 sm:py-2 border border-transparent text-xs sm:text-sm font-medium rounded-md text-white bg-green-600 hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-green-500 transition-colors duration-200"
+                             title="Publish Advertisement"
+                           >
+                             <FaCheck className="mr-1 h-3 w-3" />
+                             <span className="hidden sm:inline">Publish</span>
+                             <span className="sm:hidden">Pub</span>
+                           </button>
+                         )}
+                         {ad.status === 'active' && (
+                           <button
+                             onClick={() => handleStatusUpdate(ad._id, 'paused')}
+                             className="inline-flex items-center px-2 sm:px-3 py-1.5 sm:py-2 border border-transparent text-xs sm:text-sm font-medium rounded-md text-white bg-yellow-600 hover:bg-yellow-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-yellow-500 transition-colors duration-200"
+                             title="Pause Advertisement"
+                           >
+                             <FaClock className="mr-1 h-3 w-3" />
+                             <span className="hidden sm:inline">Pause</span>
+                             <span className="sm:hidden">Pause</span>
+                           </button>
+                         )}
+                         {ad.status === 'paused' && (
+                           <button
+                             onClick={() => handleStatusUpdate(ad._id, 'active')}
+                             className="inline-flex items-center px-2 sm:px-3 py-1.5 sm:py-2 border border-transparent text-xs sm:text-sm font-medium rounded-md text-white bg-green-600 hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-green-500 transition-colors duration-200"
+                             title="Resume Advertisement"
+                           >
+                             <FaCheck className="mr-1 h-3 w-3" />
+                             <span className="hidden sm:inline">Resume</span>
+                             <span className="sm:hidden">Res</span>
+                           </button>
+                         )}
+                         <button
+                           onClick={() => handleEdit(ad)}
+                           className="inline-flex items-center px-2 sm:px-3 py-1.5 sm:py-2 border border-gray-300 text-xs sm:text-sm font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-purple-500 transition-colors duration-200"
+                           title="Edit Advertisement"
+                         >
+                           <FaEdit className="mr-1 h-3 w-3" />
+                           <span className="hidden sm:inline">Edit</span>
+                           <span className="sm:hidden">Edit</span>
+                         </button>
+                         <button
+                           onClick={() => handleDelete(ad._id)}
+                           className="inline-flex items-center px-2 sm:px-3 py-1.5 sm:py-2 border border-gray-300 text-xs sm:text-sm font-medium rounded-md text-gray-700 bg-white hover:bg-red-50 hover:border-red-300 hover:text-red-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-red-500 transition-colors duration-200"
+                           title="Delete Advertisement"
+                         >
+                           <FaTrash className="mr-1 h-3 w-3" />
+                           <span className="hidden sm:inline">Delete</span>
+                           <span className="sm:hidden">Del</span>
+                         </button>
+                       </div>
+                     </div>
                   </div>
                 </div>
               ))

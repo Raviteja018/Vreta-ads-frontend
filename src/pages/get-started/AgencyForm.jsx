@@ -52,7 +52,7 @@ const AgencyForm = ({ onSubmitSuccess }) => {
 
       toast.success('Registration successful! Please login to continue.');
       onSubmitSuccess();
-      navigate('/agency/login');
+      navigate('/login');
     } catch (error) {
       console.error('Registration error:', error);
       const message = error.response?.data?.message || 'Registration failed. Please try again.';
