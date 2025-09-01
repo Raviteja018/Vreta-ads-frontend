@@ -211,6 +211,26 @@ const Login = () => {
                 )}
               </button>
             </div>
+            
+            {/* Employee Login Link */}
+            <div className="text-center">
+              <div className="text-sm text-gray-500 mb-2">Are you an employee or administrator?</div>
+              <div className="flex flex-col sm:flex-row gap-2 justify-center">
+                <Link
+                  to="/employee/login"
+                  className="text-sm font-medium text-green-600 hover:text-green-700 hover:underline"
+                >
+                  Employee Login →
+                </Link>
+                <span className="text-gray-400 hidden sm:inline">|</span>
+                <Link
+                  to="/admin/login"
+                  className="text-sm font-medium text-purple-600 hover:text-purple-700 hover:underline"
+                >
+                  Admin Login →
+                </Link>
+              </div>
+            </div>
           </form>
         </div>
       </div>

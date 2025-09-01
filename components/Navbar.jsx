@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { NavLink, useNavigate } from 'react-router-dom';
-import { FaBriefcase, FaUsersCog, FaUserShield, FaBars, FaTimes } from 'react-icons/fa';
+import { FaBriefcase, FaUsersCog, FaUserShield, FaBars, FaTimes, FaBuilding } from 'react-icons/fa';
 import { useAuth } from '../src/contexts/AuthContext';
 
 export default function Navbar() {
@@ -57,7 +57,13 @@ export default function Navbar() {
         </div> */}
 
         {/* Right: CTA Button */}
-        <div className="hidden md:flex">
+        <div className="hidden md:flex items-center space-x-4">
+          <NavLink
+            to="/admin/login"
+            className="text-gray-600 hover:text-purple-600 font-medium px-3 py-2 transition-colors duration-200"
+          >
+            Employee Login
+          </NavLink>
           <NavLink
             to="/get-started"
             className="bg-gradient-to-r from-purple-500 to-indigo-500 text-white font-semibold px-5 py-2 rounded-lg hover:opacity-90"
@@ -96,13 +102,18 @@ export default function Navbar() {
             Agency Portal
           </NavLink>
           <NavLink
-            to="/admin"
-            className={({ isActive }) =>
-              `flex items-center gap-2 hover:text-black ${isActive ? activeClass : ''}`
-            }
+            to="/admin/login"
+            className="flex items-center gap-2 hover:text-purple-600 text-gray-600"
           >
             <FaUserShield />
-            Admin Panel
+            Admin Login
+          </NavLink>
+          <NavLink
+            to="/employee/login"
+            className="flex items-center gap-2 hover:text-green-600 text-gray-600"
+          >
+            <FaBuilding />
+            Employee Login
           </NavLink>
           <NavLink
             to="/get-started"

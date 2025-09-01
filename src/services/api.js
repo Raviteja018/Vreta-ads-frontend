@@ -114,6 +114,14 @@ export const applicationAPI = {
       },
     });
   },
+  clientReview: (id, reviewData) => {
+    const token = localStorage.getItem('token');
+    return api.post(`${API_CONFIG.ENDPOINTS.APPLICATIONS}/${id}/client-review`, reviewData, {
+      headers: {
+        'Authorization': `Bearer ${token}`
+      },
+    });
+  },
           refreshAll: () => {
           const token = localStorage.getItem('token');
           return api.get(`${API_CONFIG.ENDPOINTS.APPLICATIONS}/refresh/all-applications`, {

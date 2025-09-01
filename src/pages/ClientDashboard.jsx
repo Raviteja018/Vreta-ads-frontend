@@ -294,10 +294,57 @@ const ClientDashboard = () => {
         return 'bg-green-100 text-green-800';
       case 'rejected':
         return 'bg-red-100 text-red-800';
+      case 'client_review':
+        return 'bg-blue-100 text-blue-800';
+      case 'employee_review':
+        return 'bg-yellow-100 text-yellow-800';
       case 'pending':
         return 'bg-yellow-100 text-yellow-800';
       default:
         return 'bg-gray-100 text-gray-800';
+    }
+  };
+
+  // Get status display text
+  const getStatusDisplayText = (status) => {
+    switch (status) {
+      case 'approved':
+        return 'Approved';
+      case 'rejected':
+        return 'Rejected';
+      case 'client_review':
+        return 'Ready for Review';
+      case 'employee_review':
+        return 'Under Employee Review';
+      case 'pending':
+        return 'Pending';
+      default:
+        return status?.charAt(0).toUpperCase() + status?.slice(1) || 'Unknown';
+    }
+  };
+
+  // Handle client review decision
+  const handleClientReview = async (applicationId, decision, feedback = '') => {
+    try {
+      await applicationAPI.clientReview(applicationId, { decision, feedback });
+      setApplications((prev) =>
+        prev.map((app) => (app._id === applicationId ? { 
+          ...app, 
+          status: decision === 'accepted' ? 'approved' : 'rejected',
+          clientReview: {
+            reviewedAt: new Date(),
+            decision,
+            feedback
+          }
+        } : app))
+      );
+      toast.success(`Application ${decision} successfully!`);
+      
+      // Refresh applications to get updated data
+      fetchApplications();
+    } catch (error) {
+      console.error('Error submitting client review:', error);
+      toast.error('Failed to submit review');
     }
   };
 
@@ -982,7 +1029,7 @@ const ClientDashboard = () => {
                           {application.advertisement?.productName || 'Unknown Advertisement'}
                         </h3>
                         <span className={`px-3 py-1 text-sm font-medium rounded-full ${getStatusBadgeColor(application.status)}`}>
-                          {application.status?.charAt(0).toUpperCase() + application.status?.slice(1) || 'Pending'}
+                          {getStatusDisplayText(application.status)}
                         </span>
                       </div>
 
@@ -1024,25 +1071,92 @@ const ClientDashboard = () => {
                           <p className="text-sm text-gray-900 bg-gray-50 p-3 rounded-md">{application.proposal}</p>
                         </div>
                       )}
+
+                      {/* Employee Review Information */}
+                      {application.employeeReview && (
+                        <div className="mb-4 bg-green-50 p-4 rounded-md">
+                          <h4 className="text-sm font-medium text-green-800 mb-2">Employee Review:</h4>
+                          <div className="grid grid-cols-1 md:grid-cols-2 gap-2 text-sm">
+                            <div>
+                              <span className="font-medium text-green-700">Budget Approved:</span>
+                              <span className={`ml-2 px-2 py-1 text-xs rounded-full ${
+                                application.employeeReview.budgetApproved 
+                                  ? 'bg-green-100 text-green-800' 
+                                  : 'bg-red-100 text-red-800'
+                              }`}>
+                                {application.employeeReview.budgetApproved ? 'Yes' : 'No'}
+                              </span>
+                    </div>
+                            <div>
+                              <span className="font-medium text-green-700">Proposal Quality:</span>
+                              <span className="ml-2 text-green-800 capitalize">{application.employeeReview.proposalQuality}</span>
+                  </div>
+                            <div>
+                              <span className="font-medium text-green-700">Portfolio Quality:</span>
+                              <span className="ml-2 text-green-800 capitalize">{application.employeeReview.portfolioQuality}</span>
+                            </div>
+                            <div>
+                              <span className="font-medium text-green-700">Reviewed By:</span>
+                              <span className="ml-2 text-green-800">{application.employeeReview.reviewedBy?.username || 'Unknown'}</span>
+                            </div>
+                          </div>
+                          {application.employeeReview.notes && (
+                            <div className="mt-2">
+                              <span className="font-medium text-green-700">Notes:</span>
+                              <p className="text-sm text-green-800 mt-1">{application.employeeReview.notes}</p>
+                            </div>
+                          )}
+                        </div>
+                      )}
+
+                      {application.clientReview && (
+                        <div className="mt-4 bg-blue-50 p-4 rounded-md">
+                          <h4 className="text-sm font-medium text-blue-800 mb-2">Client Review:</h4>
+                          <p className="text-sm text-blue-900">Decision: {application.clientReview.decision}</p>
+                          <p className="text-sm text-blue-900">Feedback: {application.clientReview.feedback}</p>
+                          <p className="text-sm text-blue-900">Reviewed At: {application.clientReview.reviewedAt ? new Date(application.clientReview.reviewedAt).toLocaleDateString() : 'N/A'}</p>
+                        </div>
+                      )}
                     </div>
                   </div>
 
-                  {application.status === 'pending' && (
+                  {/* Action Buttons */}
+                  {application.status === 'client_review' && (
                     <div className="flex flex-col sm:flex-row sm:justify-end space-y-2 sm:space-y-0 sm:space-x-3 mt-6 pt-4 border-t border-gray-200">
                       <button
-                        onClick={() => handleApplicationStatusUpdate(application._id, 'rejected')}
+                        onClick={() => handleClientReview(application._id, 'rejected', 'Client rejected the application.')}
                         className="inline-flex items-center justify-center px-4 py-2 border border-red-300 text-sm font-medium rounded-md text-red-700 bg-white hover:bg-red-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-red-500"
                       >
                         <FaTimes className="mr-2 h-4 w-4" />
                         Reject
                       </button>
                       <button
-                        onClick={() => handleApplicationStatusUpdate(application._id, 'approved')}
+                        onClick={() => handleClientReview(application._id, 'accepted', 'Client accepted the application.')}
                         className="inline-flex items-center justify-center px-4 py-2 border border-transparent text-sm font-medium rounded-md text-white bg-green-600 hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-green-500"
                       >
-                        <FaCheck className="mr-2 h-4 w-4" />
-                        Approve
+                        <FaCheck className="mr-1 h-4 w-4" />
+                        Accept
                       </button>
+                    </div>
+                  )}
+
+                  {application.status === 'employee_review' && (
+                    <div className="mt-6 pt-4 border-t border-gray-200">
+                      <div className="bg-yellow-50 p-4 rounded-md">
+                        <p className="text-sm text-yellow-800 text-center">
+                          This application is currently under employee review. You will be notified when it's ready for your review.
+                        </p>
+                      </div>
+                    </div>
+                  )}
+
+                  {application.status === 'rejected' && (
+                    <div className="mt-6 pt-4 border-t border-gray-200">
+                      <div className="bg-red-50 p-4 rounded-md">
+                        <p className="text-sm text-red-800 text-center">
+                          This application has been rejected and is no longer available for review.
+                        </p>
+                      </div>
                     </div>
                   )}
                 </div>

@@ -1,10 +1,11 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from "../../contexts/AuthContext";
-import { FaUsers, FaAd, FaHandshake, FaChartBar, FaShieldAlt, FaCog, FaChevronLeft, FaChevronRight, FaSync, FaEye, FaEdit, FaTrash, FaCheck, FaTimes } from 'react-icons/fa';
+import { FaUsers, FaAd, FaHandshake, FaChartBar, FaShieldAlt, FaCog, FaChevronLeft, FaChevronRight, FaSync, FaEye, FaEdit, FaTrash, FaCheck, FaTimes, FaClipboardCheck, FaKey, FaInfoCircle } from 'react-icons/fa';
 import { ToastContainer, toast } from 'react-toastify';
 import 'react-toastify/dist/ReactToastify.css';
 import adminAPI from '../../services/adminAPI';
+import EmployeeReviewModal from '../../components/EmployeeReviewModal';
 
 const AdminDashboard = () => {
   const navigate = useNavigate();
@@ -19,10 +20,33 @@ const AdminDashboard = () => {
   const [recentActivity, setRecentActivity] = useState([]);
   const [currentPage, setCurrentPage] = useState(1);
   const [totalPages, setTotalPages] = useState(1);
+  const [employees, setEmployees] = useState([]);
 
   // Edit modal states
   const [editModal, setEditModal] = useState({ isOpen: false, type: null, data: null });
   const [editForm, setEditForm] = useState({});
+
+  // Employee creation modal states
+  const [employeeModal, setEmployeeModal] = useState({ isOpen: false });
+  const [employeeForm, setEmployeeForm] = useState({
+    username: '',
+    password: '',
+    confirmPassword: '',
+    fullName: '',
+    email: '',
+    department: '',
+    position: '',
+    permissions: {
+      canReviewApplications: true,
+      canManageUsers: false,
+      canViewAnalytics: true
+    }
+  });
+
+  // Employee review modal states
+  const [reviewModal, setReviewModal] = useState({ isOpen: false, application: null });
+  const [pendingReviews, setPendingReviews] = useState([]);
+  const [applicationStats, setApplicationStats] = useState({});
 
   // Handle edit modal open
   const openEditModal = (type, data) => {
@@ -34,6 +58,108 @@ const AdminDashboard = () => {
   const closeEditModal = () => {
     setEditModal({ isOpen: false, type: null, data: null });
     setEditForm({});
+  };
+
+  // Handle employee modal
+  const openEmployeeModal = () => {
+    setEmployeeModal({ isOpen: true });
+    setEmployeeForm({
+      username: '',
+      password: '',
+      confirmPassword: '',
+      fullName: '',
+      email: '',
+      department: '',
+      position: '',
+      permissions: {
+        canReviewApplications: true,
+        canManageUsers: false,
+        canViewAnalytics: true
+      }
+    });
+  };
+
+  const closeEmployeeModal = () => {
+    setEmployeeModal({ isOpen: false });
+    setEmployeeForm({
+      username: '',
+      password: '',
+      confirmPassword: '',
+      fullName: '',
+      email: '',
+      department: '',
+      position: '',
+      permissions: {
+        canReviewApplications: true,
+        canManageUsers: false,
+        canViewAnalytics: true
+      }
+    });
+  };
+
+  const handleEmployeeFormChange = (field, value) => {
+    if (field.includes('.')) {
+      const [parent, child] = field.split('.');
+      setEmployeeForm(prev => ({
+        ...prev,
+        [parent]: {
+          ...prev[parent],
+          [child]: value
+        }
+      }));
+    } else {
+      setEmployeeForm(prev => ({
+        ...prev,
+        [field]: value
+      }));
+    }
+  };
+
+  const handleEmployeeSubmit = async (e) => {
+    e.preventDefault();
+    
+    // Validation
+    if (employeeForm.password !== employeeForm.confirmPassword) {
+      toast.error('Passwords do not match');
+      return;
+    }
+    
+    if (employeeForm.password.length < 6) {
+      toast.error('Password must be at least 6 characters long');
+      return;
+    }
+
+    try {
+      const response = await fetch('http://localhost:3000/api/admin/employees', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${localStorage.getItem('token')}`
+        },
+        body: JSON.stringify({
+          username: employeeForm.username,
+          password: employeeForm.password,
+          fullName: employeeForm.fullName,
+          email: employeeForm.email,
+          department: employeeForm.department,
+          position: employeeForm.position,
+          permissions: employeeForm.permissions
+        })
+      });
+
+      if (response.ok) {
+        const result = await response.json();
+        toast.success(result.message);
+        closeEmployeeModal();
+        // Refresh employees list if we have one
+      } else {
+        const error = await response.json();
+        toast.error(error.message || 'Failed to create employee');
+      }
+    } catch (error) {
+      console.error('Error creating employee:', error);
+      toast.error('Failed to create employee');
+    }
   };
 
   // Handle edit form submission
@@ -62,6 +188,24 @@ const AdminDashboard = () => {
           toast.success('Client updated successfully');
           await loadClients();
           break;
+        case 'employee':
+          const response = await fetch(`http://localhost:3000/api/admin/employees/${editModal.data._id}`, {
+            method: 'PUT',
+            headers: {
+              'Content-Type': 'application/json',
+              'Authorization': `Bearer ${localStorage.getItem('token')}`
+            },
+            body: JSON.stringify(editForm)
+          });
+          
+          if (response.ok) {
+            toast.success('Employee updated successfully');
+            await loadEmployees();
+          } else {
+            const error = await response.json();
+            throw new Error(error.message || 'Failed to update employee');
+          }
+          break;
         default:
           throw new Error('Unknown edit type');
       }
@@ -69,6 +213,51 @@ const AdminDashboard = () => {
     } catch (error) {
       console.error('Error updating:', error);
       toast.error(`Failed to update: ${error.message || 'Unknown error'}`);
+    }
+  };
+
+  // Handle employee review modal
+  const openReviewModal = (application) => {
+    setReviewModal({ isOpen: true, application });
+  };
+
+  const closeReviewModal = () => {
+    setReviewModal({ isOpen: false, application: null });
+  };
+
+  const handleEmployeeReview = async (applicationId, reviewData) => {
+    try {
+      await adminAPI.submitEmployeeReview(applicationId, reviewData);
+      toast.success(`Application ${reviewData.decision === 'approve' ? 'approved and sent to client' : 'rejected'}`);
+      closeReviewModal();
+      await loadPendingReviews();
+      await loadApplications();
+      await loadApplicationStats();
+    } catch (error) {
+      console.error('Error submitting review:', error);
+      toast.error(`Failed to submit review: ${error.message || 'Unknown error'}`);
+    }
+  };
+
+  // Load pending review applications
+  const loadPendingReviews = async () => {
+    try {
+      const response = await adminAPI.getPendingReviewApplications();
+      setPendingReviews(response.data || []);
+    } catch (error) {
+      console.error('Error loading pending reviews:', error);
+      toast.error('Failed to load pending reviews');
+    }
+  };
+
+  // Load application statistics
+  const loadApplicationStats = async () => {
+    try {
+      const response = await adminAPI.getApplicationStats();
+      setApplicationStats(response.data || {});
+    } catch (error) {
+      console.error('Error loading application stats:', error);
+      toast.error('Failed to load application statistics');
     }
   };
 
@@ -140,14 +329,33 @@ const AdminDashboard = () => {
   // Load applications
   const loadApplications = async () => {
     try {
-      console.log('Loading applications...');
-      const response = await adminAPI.getApplications(currentPage, 10);
-      console.log('Applications response:', response);
-      setApplications(response.applications || []);
-      setTotalPages(response.pagination?.totalPages || 1);
+      const result = await adminAPI.getApplications(currentPage);
+      setApplications(result.applications || []);
+      setTotalPages(result.pagination?.totalPages || 1);
     } catch (error) {
       console.error('Error loading applications:', error);
       toast.error(`Failed to load applications: ${error.message || 'Unknown error'}`);
+    }
+  };
+
+  // Load employees
+  const loadEmployees = async () => {
+    try {
+      const response = await fetch('http://localhost:3000/api/admin/employees', {
+        headers: {
+          'Authorization': `Bearer ${localStorage.getItem('token')}`
+        }
+      });
+      
+      if (response.ok) {
+        const result = await response.json();
+        setEmployees(result.employees || []);
+      } else {
+        toast.error('Failed to load employees');
+      }
+    } catch (error) {
+      console.error('Error loading employees:', error);
+      toast.error('Failed to load employees');
     }
   };
 
@@ -190,6 +398,10 @@ const AdminDashboard = () => {
         loadAdvertisements();
       } else if (activeTab === 'applications') {
         loadApplications();
+      } else if (activeTab === 'pending-reviews') {
+        loadPendingReviews();
+      } else if (activeTab === 'employees') {
+        loadEmployees();
       }
     }
   }, [activeTab, currentPage, isAuthenticated]);
@@ -210,7 +422,9 @@ const AdminDashboard = () => {
     { id: 'clients', label: 'User Management', icon: FaUsers, color: 'bg-gradient-to-r from-green-500 to-teal-600' },
     { id: 'advertisements', label: 'Advertisements', icon: FaAd, color: 'bg-gradient-to-r from-orange-500 to-red-600' },
     { id: 'applications', label: 'Applications', icon: FaHandshake, color: 'bg-gradient-to-r from-indigo-500 to-blue-600' },
-    { id: 'agencies', label: 'Agencies', icon: FaShieldAlt, color: 'bg-gradient-to-r from-pink-500 to-rose-600' }
+    { id: 'pending-reviews', label: 'Pending Reviews', icon: FaClipboardCheck, color: 'bg-gradient-to-r from-yellow-500 to-orange-600' },
+    { id: 'employees', label: 'Employees', icon: FaUsers, color: 'bg-gradient-to-r from-pink-500 to-rose-600' },
+    { id: 'agencies', label: 'Agencies', icon: FaShieldAlt, color: 'bg-gradient-to-r from-purple-500 to-indigo-600' }
   ];
 
   const StatCard = ({ title, value, icon: Icon, color, subtitle }) => (
@@ -560,6 +774,112 @@ const AdminDashboard = () => {
             </div>
           )}
 
+          {/* Employees Tab */}
+          {activeTab === 'employees' && (
+            <div className="space-y-4">
+              <div className="flex justify-between items-center">
+                <div>
+                  <h2 className="text-xl font-semibold text-gray-900">Employee Management</h2>
+                  <p className="text-sm text-gray-600 mt-1">Employees login with username and password</p>
+                </div>
+                <button
+                  onClick={openEmployeeModal}
+                  className="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors duration-200"
+                >
+                  <FaUsers className="w-4 h-4 inline mr-2" />
+                  Add Employee
+                </button>
+              </div>
+              <TableCard title="Employee Management">
+                <div className="px-6 py-3 bg-blue-50 border-b border-blue-200">
+                  <p className="text-sm text-blue-800">
+                    <strong>Login Information:</strong> Employees use their <strong>username</strong> and password to access the employee dashboard.
+                  </p>
+                </div>
+                <table className="min-w-full divide-y divide-gray-200">
+                  <thead className="bg-gray-50">
+                    <tr>
+                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                        <div className="flex items-center space-x-1">
+                          <span>Username</span>
+                          <div className="relative group">
+                            <FaInfoCircle className="w-3 h-3 text-gray-400 cursor-help" />
+                            <div className="absolute bottom-full left-1/2 transform -translate-x-1/2 mb-2 px-2 py-1 text-xs text-white bg-gray-800 rounded opacity-0 group-hover:opacity-100 transition-opacity duration-200 whitespace-nowrap z-10">
+                              Login credential
+                            </div>
+                          </div>
+                        </div>
+                      </th>
+                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Full Name</th>
+                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Email</th>
+                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Department</th>
+                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Position</th>
+                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Status</th>
+                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Actions</th>
+                    </tr>
+                  </thead>
+                  <tbody className="bg-white divide-y divide-gray-200">
+                    {employees.map((employee) => (
+                      <tr key={employee._id} className="hover:bg-gray-50">
+                        <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">
+                          {employee.userId?.username}
+                        </td>
+                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                          {employee.fullName}
+                        </td>
+                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                          {employee.email}
+                        </td>
+                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                          {employee.department}
+                        </td>
+                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                          {employee.position}
+                        </td>
+                        <td className="px-6 py-4 whitespace-nowrap">
+                          <span className={`px-2 py-1 text-xs font-medium rounded-full ${
+                            employee.isActive 
+                              ? 'bg-green-100 text-green-800' 
+                              : 'bg-red-100 text-red-800'
+                          }`}>
+                            {employee.isActive ? 'Active' : 'Inactive'}
+                          </span>
+                        </td>
+                        <td className="px-6 py-4 whitespace-nowrap text-sm font-medium space-x-2">
+                          <button 
+                            onClick={() => openEditModal('employee', employee)}
+                            className="text-blue-600 hover:text-blue-900 p-1 rounded hover:bg-blue-50"
+                            title="Edit Employee"
+                          >
+                            <FaEdit className="w-4 h-4" />
+                          </button>
+                          <button 
+                            onClick={() => {/* TODO: Add reset password functionality */}}
+                            className="text-green-600 hover:text-green-900 p-1 rounded hover:bg-green-50"
+                            title="Reset Password"
+                          >
+                            <FaKey className="w-4 h-4" />
+                          </button>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+                {employees.length === 0 && (
+                  <div className="text-center py-8 text-gray-500">
+                    <p>No employees found</p>
+                    <button
+                      onClick={loadEmployees}
+                      className="mt-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors duration-200"
+                    >
+                      Try Loading Again
+                    </button>
+                  </div>
+                )}
+              </TableCard>
+            </div>
+          )}
+
           {/* Advertisements Tab */}
           {activeTab === 'advertisements' && (
             <div className="space-y-4">
@@ -722,6 +1042,79 @@ const AdminDashboard = () => {
               </TableCard>
             </div>
           )}
+
+          {/* Pending Reviews Tab */}
+          {activeTab === 'pending-reviews' && (
+            <div className="space-y-4">
+              <div className="flex justify-between items-center">
+                <h2 className="text-xl font-semibold text-gray-900">Pending Review Applications</h2>
+                <button
+                  onClick={loadPendingReviews}
+                  className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors duration-200"
+                >
+                  <FaSync className="w-4 h-4 inline mr-2" />
+                  Refresh Pending Reviews
+                </button>
+              </div>
+              <TableCard title="Pending Review Applications">
+                <table className="min-w-full divide-y divide-gray-200">
+                  <thead className="bg-gray-50">
+                    <tr>
+                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Advertisement</th>
+                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Agency</th>
+                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Budget</th>
+                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Status</th>
+                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Actions</th>
+                    </tr>
+                  </thead>
+                  <tbody className="bg-white divide-y divide-gray-200">
+                    {pendingReviews.map((app) => (
+                      <tr key={app._id} className="hover:bg-gray-50">
+                        <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">{app.advertisement?.productName}</td>
+                        <td className="px-6 py-4 whitespace-nowrap">
+                          <div>
+                            <div className="text-sm font-medium text-gray-900">{app.agency?.fullname}</div>
+                            <div className="text-sm text-gray-500">{app.agency?.agencyName}</div>
+                          </div>
+                        </td>
+                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">${app.budget?.toLocaleString() || 'Not specified'}</td>
+                        <td className="px-6 py-4 whitespace-nowrap">
+                          <span className={`px-2 py-1 text-xs font-medium rounded-full ${
+                            app.status === 'employee_review' 
+                              ? 'bg-yellow-100 text-yellow-800' 
+                              : 'bg-green-100 text-green-800'
+                          }`}>
+                            Employee Review
+                          </span>
+                        </td>
+                        <td className="px-6 py-4 whitespace-nowrap text-sm font-medium space-x-2">
+                          <button 
+                            onClick={() => openReviewModal(app)}
+                            className="text-blue-600 hover:text-blue-900 p-1 rounded hover:bg-blue-50"
+                            title="Review Application"
+                          >
+                            <FaClipboardCheck className="w-4 h-4" />
+                          </button>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+                {pendingReviews.length === 0 && (
+                  <div className="text-center py-8 text-gray-500">
+                    <p>No pending review applications found</p>
+                    <button
+                      onClick={loadPendingReviews}
+                      className="mt-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors duration-200"
+                    >
+                      Try Loading Again
+                    </button>
+                  </div>
+                )}
+              </TableCard>
+            </div>
+          )}
+
         </div>
 
         {/* Edit Modal */}
@@ -891,6 +1284,76 @@ const AdminDashboard = () => {
                     </>
                   )}
 
+                  {editModal.type === 'employee' && (
+                    <>
+                      <div className="mb-4 p-3 bg-blue-50 border border-blue-200 rounded-lg">
+                        <p className="text-sm text-blue-800">
+                          <strong>Note:</strong> Username cannot be changed. Employees login with their username and password.
+                        </p>
+                      </div>
+                      <div>
+                        <label className="block text-sm font-medium text-gray-700 mb-1">Username (Read-only)</label>
+                        <input
+                          type="text"
+                          value={editForm.userId?.username || ''}
+                          className="w-full px-3 py-2 border border-gray-300 rounded-lg bg-gray-100 text-gray-600"
+                          disabled
+                        />
+                      </div>
+                      <div>
+                        <label className="block text-sm font-medium text-gray-700 mb-1">Full Name</label>
+                        <input
+                          type="text"
+                          value={editForm.fullName || ''}
+                          onChange={(e) => handleEditFormChange('fullName', e.target.value)}
+                          className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                          required
+                        />
+                      </div>
+                      <div>
+                        <label className="block text-sm font-medium text-gray-700 mb-1">Email</label>
+                        <input
+                          type="email"
+                          value={editForm.email || ''}
+                          onChange={(e) => handleEditFormChange('email', e.target.value)}
+                          className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                          required
+                        />
+                      </div>
+                      <div>
+                        <label className="block text-sm font-medium text-gray-700 mb-1">Department</label>
+                        <input
+                          type="text"
+                          value={editForm.department || ''}
+                          onChange={(e) => handleEditFormChange('department', e.target.value)}
+                          className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                          required
+                        />
+                      </div>
+                      <div>
+                        <label className="block text-sm font-medium text-gray-700 mb-1">Position</label>
+                        <input
+                          type="text"
+                          value={editForm.position || ''}
+                          onChange={(e) => handleEditFormChange('position', e.target.value)}
+                          className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                          required
+                        />
+                      </div>
+                      <div>
+                        <label className="block text-sm font-medium text-gray-700 mb-1">Status</label>
+                        <select
+                          value={editForm.isActive !== undefined ? editForm.isActive : true}
+                          onChange={(e) => handleEditFormChange('isActive', e.target.value === 'true')}
+                          className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                        >
+                          <option value={true}>Active</option>
+                          <option value={false}>Inactive</option>
+                        </select>
+                      </div>
+                    </>
+                  )}
+
                   <div className="flex space-x-3 pt-4">
                     <button
                       type="button"
@@ -910,6 +1373,177 @@ const AdminDashboard = () => {
               </div>
             </div>
           </div>
+        )}
+
+        {/* Employee Creation Modal */}
+        {employeeModal.isOpen && (
+          <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+            <div className="bg-white rounded-xl shadow-2xl max-w-md w-full max-h-[90vh] overflow-y-auto">
+              <div className="p-6">
+                <div className="flex justify-between items-center mb-6">
+                  <h3 className="text-lg font-semibold text-gray-900">Create New Employee</h3>
+                  <button
+                    onClick={closeEmployeeModal}
+                    className="text-gray-400 hover:text-gray-600 transition-colors duration-200"
+                  >
+                    <FaTimes className="w-6 h-6" />
+                  </button>
+                </div>
+                
+                <div className="mb-4 p-3 bg-blue-50 border border-blue-200 rounded-lg">
+                  <p className="text-sm text-blue-800">
+                    <strong>Note:</strong> Employees will login using their <strong>username</strong> and password, not their email address.
+                  </p>
+                </div>
+
+                <form onSubmit={handleEmployeeSubmit} className="space-y-4" autoComplete="off">
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">Username</label>
+                    <input
+                      type="text"
+                      name="employee-username"
+                      value={employeeForm.username}
+                      onChange={(e) => handleEmployeeFormChange('username', e.target.value)}
+                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                      autoComplete="new-username"
+                      autoCorrect="off"
+                      autoCapitalize="off"
+                      spellCheck="false"
+                      required
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">Password</label>
+                    <input
+                      type="password"
+                      name="employee-password"
+                      value={employeeForm.password}
+                      onChange={(e) => handleEmployeeFormChange('password', e.target.value)}
+                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                      autoComplete="new-password"
+                      autoCorrect="off"
+                      autoCapitalize="off"
+                      spellCheck="false"
+                      required
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">Confirm Password</label>
+                    <input
+                      type="password"
+                      name="employee-confirm-password"
+                      value={employeeForm.confirmPassword}
+                      onChange={(e) => handleEmployeeFormChange('confirmPassword', e.target.value)}
+                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                      autoComplete="new-password"
+                      autoCorrect="off"
+                      autoCapitalize="off"
+                      spellCheck="false"
+                      required
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">Full Name</label>
+                    <input
+                      type="text"
+                      value={employeeForm.fullName}
+                      onChange={(e) => handleEmployeeFormChange('fullName', e.target.value)}
+                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                      required
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">Email</label>
+                    <input
+                      type="email"
+                      value={employeeForm.email}
+                      onChange={(e) => handleEmployeeFormChange('email', e.target.value)}
+                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                      required
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">Department</label>
+                    <input
+                      type="text"
+                      value={employeeForm.department}
+                      onChange={(e) => handleEmployeeFormChange('department', e.target.value)}
+                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                      required
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">Position</label>
+                    <input
+                      type="text"
+                      value={employeeForm.position}
+                      onChange={(e) => handleEmployeeFormChange('position', e.target.value)}
+                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                      required
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">Permissions</label>
+                    <div className="grid grid-cols-2 gap-2">
+                      <label className="flex items-center">
+                        <input
+                          type="checkbox"
+                          checked={employeeForm.permissions.canReviewApplications}
+                          onChange={(e) => handleEmployeeFormChange('permissions.canReviewApplications', e.target.checked)}
+                          className="mr-2"
+                        />
+                        Can Review Applications
+                      </label>
+                      <label className="flex items-center">
+                        <input
+                          type="checkbox"
+                          checked={employeeForm.permissions.canManageUsers}
+                          onChange={(e) => handleEmployeeFormChange('permissions.canManageUsers', e.target.checked)}
+                          className="mr-2"
+                        />
+                        Can Manage Users
+                      </label>
+                      <label className="flex items-center">
+                        <input
+                          type="checkbox"
+                          checked={employeeForm.permissions.canViewAnalytics}
+                          onChange={(e) => handleEmployeeFormChange('permissions.canViewAnalytics', e.target.checked)}
+                          className="mr-2"
+                        />
+                        Can View Analytics
+                      </label>
+                    </div>
+                  </div>
+
+                  <div className="flex space-x-3 pt-4">
+                    <button
+                      type="button"
+                      onClick={closeEmployeeModal}
+                      className="flex-1 px-4 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition-colors duration-200"
+                    >
+                      Cancel
+                    </button>
+                    <button
+                      type="submit"
+                      className="flex-1 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors duration-200"
+                    >
+                      Create Employee
+                    </button>
+                  </div>
+                </form>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* Employee Review Modal */}
+        {reviewModal.isOpen && (
+          <EmployeeReviewModal
+            isOpen={reviewModal.isOpen}
+            onClose={closeReviewModal}
+            application={reviewModal.application}
+            onSubmit={handleEmployeeReview}
+          />
         )}
 
         <ToastContainer position="top-right" />

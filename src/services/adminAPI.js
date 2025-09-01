@@ -198,6 +198,69 @@ const adminAPI = {
     } catch (error) {
       throw error.response?.data || error.message;
     }
+  },
+
+  // Get applications pending employee review
+  getPendingReviewApplications: async () => {
+    const token = localStorage.getItem('token');
+    try {
+      const response = await axios.get(`${API_CONFIG.BASE_URL}/admin/applications/pending-review`, {
+        headers: {
+          'Authorization': `Bearer ${token}`
+        }
+      });
+      return response.data;
+    } catch (error) {
+      throw error.response?.data || error.message;
+    }
+  },
+
+  // Get application details for review
+  getApplicationForReview: async (applicationId) => {
+    const token = localStorage.getItem('token');
+    try {
+      const response = await axios.get(`${API_CONFIG.BASE_URL}/admin/applications/${applicationId}/review`, {
+        headers: {
+          'Authorization': `Bearer ${token}`
+        }
+      });
+      return response.data;
+    } catch (error) {
+      throw error.response?.data || error.message;
+    }
+  },
+
+  // Submit employee review
+  submitEmployeeReview: async (applicationId, reviewData) => {
+    const token = localStorage.getItem('token');
+    try {
+      const response = await axios.post(`${API_CONFIG.BASE_URL}/admin/applications/${applicationId}/review`, 
+        reviewData,
+        {
+          headers: {
+            'Authorization': `Bearer ${token}`
+          }
+        }
+      );
+      return response.data;
+    } catch (error) {
+      throw error.response?.data || error.message;
+    }
+  },
+
+  // Get application statistics
+  getApplicationStats: async () => {
+    const token = localStorage.getItem('token');
+    try {
+      const response = await axios.get(`${API_CONFIG.BASE_URL}/admin/applications/stats`, {
+        headers: {
+          'Authorization': `Bearer ${token}`
+        }
+      });
+      return response.data;
+    } catch (error) {
+      throw error.response?.data || error.message;
+    }
   }
 };
 

@@ -12,6 +12,8 @@ import ClientDashboard from "./pages/ClientDashboard.jsx";
 import AgencyDashboard from "./pages/AgencyDashboard.jsx";
 import AdminDashboard from "./pages/admin/AdminDashboard";
 import AdminLoginPage from "./pages/admin/AdminLoginPage.jsx";
+import EmployeeDashboard from "./pages/EmployeeDashboard.jsx";
+import EmployeeLoginPage from "./pages/EmployeeLoginPage.jsx";
 import NotFound from "./pages/NotFound";
 
 // Toast notifications
@@ -114,6 +116,13 @@ const AppLayout = () => {
 
             <Route path="/admin/login" element={<AdminLoginPage />} />
             <Route path="/admin" element={<AdminDashboard />} />
+            
+            <Route path="/employee/login" element={<EmployeeLoginPage />} />
+            <Route path="/employee/dashboard" element={
+              <ProtectedRoute requiredRole="employee">
+                <EmployeeDashboard />
+              </ProtectedRoute>
+            } />
 
             {/* 404 - Not Found */}
             <Route path="*" element={<NotFound />} />

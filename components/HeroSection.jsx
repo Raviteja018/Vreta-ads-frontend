@@ -3,6 +3,7 @@ import React from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../src/contexts/AuthContext';
 import AdminLoginButton from '../src/components/AdminLoginButton';
+import EmployeeLoginButton from '../src/components/EmployeeLoginButton';
 
 export default function HeroSection() {
   const {user, isAuthenticated, loading, logout} = useAuth();
@@ -88,8 +89,7 @@ export default function HeroSection() {
       
       <div className="mt-4">
         <AdminLoginButton />
-
-      
+        <EmployeeLoginButton />
       </div>
     </section>
   );
