@@ -20,9 +20,11 @@ export const AuthProvider = ({children}) => {
           const userData = JSON.parse(storedUser);
           // Basic validation - check if token and user data exist
           // Handle both 'id' and '_id' fields for compatibility
-          if ((userData.id || userData._id) && userData.token && userData.token === token) {
+          if ((userData.id || userData._id) && token) {
             console.log("AuthContext: Valid user data found, setting user");
-            setUser(userData);
+            // Add token to user data for consistency
+            const userWithToken = { ...userData, token };
+            setUser(userWithToken);
           } else {
             console.log("AuthContext: Invalid user data, clearing");
             localStorage.removeItem('user');
@@ -47,10 +49,11 @@ export const AuthProvider = ({children}) => {
 
   const login = (userData) => {
     console.log("AuthContext: Login called with:", userData);
-    setUser(userData);
-    localStorage.setItem('user', JSON.stringify(userData));
-    localStorage.setItem('token', userData.token); // Store token separately
-    console.log("AuthContext: User state updated, new state:", userData);
+    // Ensure token is included in user data
+    const userWithToken = { ...userData, token: localStorage.getItem('token') };
+    setUser(userWithToken);
+    localStorage.setItem('user', JSON.stringify(userWithToken));
+    console.log("AuthContext: User state updated, new state:", userWithToken);
   }
 
   const logout = () => {
@@ -70,7 +73,7 @@ export const AuthProvider = ({children}) => {
     try {
       const user = JSON.parse(userData);
       // Check for either 'id' or '_id' to handle different data structures
-      return !!(user.id || user._id) && user.token;
+      return !!(user.id || user._id) && token;
     } catch {
       return false;
     }

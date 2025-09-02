@@ -44,6 +44,7 @@ const EmployeeLoginPage = () => {
       const data = await response.json();
 
       if (response.ok) {
+        // Store token first, then call login
         localStorage.setItem('token', data.token);
         login(data.user);
         toast.success('Login successful!');
