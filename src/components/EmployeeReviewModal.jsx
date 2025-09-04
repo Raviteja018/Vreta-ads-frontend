@@ -170,8 +170,8 @@ const EmployeeReviewModal = ({ application, isOpen, onClose, onSubmit }) => {
                       <div className="bg-white p-4 rounded-md border border-gray-200">
                         <p className="text-sm text-gray-900 leading-relaxed">{application.message}</p>
                       </div>
-                    </div>
-                  )}
+                </div>
+              )}
 
               {application.proposal && (
                 <div>
