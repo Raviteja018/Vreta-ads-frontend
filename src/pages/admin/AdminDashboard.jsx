@@ -514,7 +514,7 @@ const AdminDashboard = () => {
         {/* Content Area */}
         <div className="space-y-8">
           {/* Debug Section - Remove in production */}
-          <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-4">
+          {/* <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-4">
             <h3 className="text-sm font-medium text-yellow-800 mb-2">🔧 Debug Info (Development)</h3>
             <div className="text-xs text-yellow-700 space-y-1">
               <div>Active Tab: {activeTab}</div>
@@ -526,7 +526,7 @@ const AdminDashboard = () => {
               <div>Analytics: {Object.keys(analytics).length > 0 ? 'Loaded' : 'Not loaded'}</div>
               <div>Recent Activity: {recentActivity.length} items</div>
             </div>
-          </div>
+          </div> */}
 
           {/* Analytics Tab */}
           {activeTab === 'analytics' && (

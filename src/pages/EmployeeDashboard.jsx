@@ -419,9 +419,10 @@ const EmployeeDashboard = () => {
                     <option value="all">All Budgets</option>
                     <option value="low">Low (≤ $5,000)</option>
                     <option value="medium">Medium ($5,001 - $25,000)</option>
-                    <option value="high">High (> $25,000)</option>
+                    <option value="high">High ($25,000)</option>
                   </select>
                 </div>
+                
                 
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-2">Date Range</label>

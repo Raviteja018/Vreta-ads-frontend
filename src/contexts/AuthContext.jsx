@@ -49,10 +49,14 @@ export const AuthProvider = ({children}) => {
 
   const login = (userData) => {
     console.log("AuthContext: Login called with:", userData);
-    // Ensure token is included in user data
-    const userWithToken = { ...userData, token: localStorage.getItem('token') };
+    // Ensure token is included in user data and stored in localStorage
+    const userWithToken = { ...userData, token: userData.token || localStorage.getItem('token') };
     setUser(userWithToken);
     localStorage.setItem('user', JSON.stringify(userWithToken));
+    // Store token separately in localStorage for API calls
+    if (userData.token) {
+      localStorage.setItem('token', userData.token);
+    }
     console.log("AuthContext: User state updated, new state:", userWithToken);
   }
 
