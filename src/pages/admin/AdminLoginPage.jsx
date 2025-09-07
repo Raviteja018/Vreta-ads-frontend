@@ -28,6 +28,11 @@ const AdminLoginPage = () => {
       console.log(response)
 
       if (response.data.role === "admin") {
+        // Persist token first so context and APIs can read it
+        if (response.data.token) {
+          localStorage.setItem('token', response.data.token);
+        }
+
         // Use AuthContext to store user data and token
         const userData = {
           id: response.data._id,
