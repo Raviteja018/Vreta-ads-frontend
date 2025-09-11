@@ -42,7 +42,11 @@ const Login = () => {
       console.log("Response data:", response.data);
       console.log("Response data keys:", Object.keys(response.data));
       
-      const token = response.data.token;
+      // Guard: require a token to proceed. If missing, treat as invalid credentials
+      const token = response.data?.token;
+      if (!token) {
+        throw new Error(response.data?.message || 'Invalid credentials');
+      }
       const userData = {
         id: response.data.id,
         name: response.data.name,
@@ -85,10 +89,17 @@ const Login = () => {
 
       toast.success("Login successful!");
     } catch (error) {
-      console.error("Login error:", error);
-      const errorMessage =
-        error.response?.data?.message || "Login failed. Please try again.";
-      toast.error(errorMessage);
+      const status = error.response?.status;
+      const msg = error.response?.data?.message || error.message;
+      if (!error.response) {
+        toast.error("Cannot reach server. Please try again later.");
+      } else if (status === 403 && msg?.includes('registered as')) {
+        toast.error(msg);
+      } else if (status === 400 || status === 401 || status === 403) {
+        toast.error(msg || "Invalid credentials. Please try again.");
+      } else {
+        toast.error(msg || "Login failed. Please try again.");
+      }
     } finally {
       setIsLoading(false);
     }

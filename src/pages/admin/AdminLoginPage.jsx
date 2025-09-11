@@ -1,7 +1,7 @@
 import axios from "axios";
 import React, { useState } from "react";
 import { useNavigate, Link } from "react-router-dom";
-import { toast } from "react-toastify";
+import { toast, ToastContainer } from "react-toastify";
 import { useAuth } from "../../contexts/AuthContext";
 
 const AdminLoginPage = () => {
@@ -48,10 +48,16 @@ const AdminLoginPage = () => {
         toast.error("You do not have admin privileges");
       }
     } catch (error) {
-      console.error("Login error:", error);
-      const errorMessage =
-        error.response?.data?.message || "Failed to login. Please try again.";
-      toast.error(errorMessage);
+      // Prefer toast notifications over console errors for UX
+      const status = error.response?.status;
+      const msg = error.response?.data?.message;
+      if (!error.response) {
+        toast.error("Cannot reach server. Please try again later.");
+      } else if (status === 401 || status === 400 || status === 403 || status === 500) {
+        toast.error(msg || "Invalid credentials. Please try again.");
+      } else {
+        toast.error("Login failed. Please try again.");
+      }
     } finally {
       setIsLoading(false);
     }
@@ -144,6 +150,8 @@ const AdminLoginPage = () => {
           </div>
         </div>
       </div>
+      {/* Ensure a ToastContainer is present on this page */}
+      <ToastContainer position="top-right" />
     </div>
   );
 };

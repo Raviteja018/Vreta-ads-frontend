@@ -77,6 +77,21 @@ const adminAPI = {
     }
   },
 
+  // Get applications filtered by status (with pagination)
+  getApplicationsByStatus: async (status, page = 1, limit = 10) => {
+    const token = localStorage.getItem('token');
+    try {
+      const response = await axios.get(`${API_CONFIG.BASE_URL}/admin/applications?status=${encodeURIComponent(status)}&page=${page}&limit=${limit}`, {
+        headers: {
+          'Authorization': `Bearer ${token}`
+        }
+      });
+      return response.data;
+    } catch (error) {
+      throw error.response?.data || error.message;
+    }
+  },
+
   // Approve/Reject client
   approveClient: async (clientId, action) => {
     const token = localStorage.getItem('token');
@@ -236,6 +251,24 @@ const adminAPI = {
     try {
       const response = await axios.post(`${API_CONFIG.BASE_URL}/admin/applications/${applicationId}/review`, 
         reviewData,
+        {
+          headers: {
+            'Authorization': `Bearer ${token}`
+          }
+        }
+      );
+      return response.data;
+    } catch (error) {
+      throw error.response?.data || error.message;
+    }
+  },
+
+  // Admin final approval (approve/reject)
+  adminFinalApproval: async (applicationId, decision, notes = '') => {
+    const token = localStorage.getItem('token');
+    try {
+      const response = await axios.post(`${API_CONFIG.BASE_URL}/admin/applications/${applicationId}/final-approval`,
+        { decision, notes },
         {
           headers: {
             'Authorization': `Bearer ${token}`

@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import axios from 'axios';
 import { FaUser, FaEnvelope, FaBuilding, FaPhone, FaMapMarkerAlt, FaUsers, FaGlobe, FaArrowLeft } from 'react-icons/fa';
 import { useNavigate } from 'react-router-dom';
 import { toast } from 'react-toastify';
@@ -12,6 +13,7 @@ const AgencyForm = ({ onSubmitSuccess }) => {
     agencyAddress: '',
     agencyWebsite: '',
     password: '',
+    confirmPassword: ''
   });
   const [isSubmitting, setIsSubmitting] = useState(false);
   const navigate = useNavigate();
@@ -50,8 +52,11 @@ const AgencyForm = ({ onSubmitSuccess }) => {
         password: formData.password,
       };
 
-      toast.success('Registration successful! Please login to continue.');
-      onSubmitSuccess();
+      // Call backend API to register agency
+      const res = await axios.post('http://localhost:3000/api/agency/register', payload);
+
+      toast.success(res.data?.message || 'Registration successful! Please login to continue.');
+      onSubmitSuccess?.();
       navigate('/login');
     } catch (error) {
       console.error('Registration error:', error);
@@ -157,7 +162,7 @@ const AgencyForm = ({ onSubmitSuccess }) => {
           </div>
           <input
             type="url"
-            name="  agencyWebsite"
+            name="agencyWebsite"
             value={formData.agencyWebsite}
             onChange={handleChange}
             placeholder="Website URL (optional)"
@@ -172,6 +177,18 @@ const AgencyForm = ({ onSubmitSuccess }) => {
             value={formData.password}
             onChange={handleChange}
             placeholder="Create Password"
+            className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-600 focus:border-transparent"
+            required
+          />
+        </div>
+
+        <div className="relative">
+          <input
+            type="password"
+            name="confirmPassword"
+            value={formData.confirmPassword}
+            onChange={handleChange}
+            placeholder="Confirm Password"
             className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-600 focus:border-transparent"
             required
           />

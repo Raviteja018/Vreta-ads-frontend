@@ -21,15 +21,7 @@ const AdminDashboard = () => {
   const [currentPage, setCurrentPage] = useState(1);
   const [totalPages, setTotalPages] = useState(1);
   const [employees, setEmployees] = useState([]);
-
-  // Edit modal states
-  const [editModal, setEditModal] = useState({ isOpen: false, type: null, data: null });
-  const [editForm, setEditForm] = useState({});
-
-  // Employee creation modal states
-  const [employeeModal, setEmployeeModal] = useState({ isOpen: false });
-  const [employeeForm, setEmployeeForm] = useState({
-    username: '',
+  const [formData, setFormData] = useState({
     password: '',
     confirmPassword: '',
     fullName: '',
@@ -47,6 +39,14 @@ const AdminDashboard = () => {
   const [reviewModal, setReviewModal] = useState({ isOpen: false, application: null });
   const [pendingReviews, setPendingReviews] = useState([]);
   const [applicationStats, setApplicationStats] = useState({});
+
+  // Edit modal states
+  const [editModal, setEditModal] = useState({ isOpen: false, type: null, data: null });
+  const [editForm, setEditForm] = useState({});
+
+  // Employee modal states
+  const [employeeModal, setEmployeeModal] = useState({ isOpen: false });
+  const [employeeForm, setEmployeeForm] = useState({});
 
   // Handle edit modal open
   const openEditModal = (type, data) => {
@@ -242,8 +242,22 @@ const AdminDashboard = () => {
   // Load pending review applications
   const loadPendingReviews = async () => {
     try {
-      const response = await adminAPI.getPendingReviewApplications();
-      setPendingReviews(response.data || []);
+      const [employeeResp, clientReviewResp] = await Promise.all([
+        adminAPI.getPendingReviewApplications(), // status: employee_review
+        adminAPI.getApplicationsByStatus('client_review', 1, 50) // status: client_review
+      ]);
+
+      const employeeItems = employeeResp.data || [];
+      const clientItems = (clientReviewResp.applications || []).map(a => ({ ...a, status: 'client_review' }));
+
+      // Merge and sort by createdAt desc if available
+      const merged = [...employeeItems, ...clientItems].sort((a, b) => {
+        const da = new Date(a.createdAt || 0).getTime();
+        const db = new Date(b.createdAt || 0).getTime();
+        return db - da;
+      });
+
+      setPendingReviews(merged);
     } catch (error) {
       console.error('Error loading pending reviews:', error);
       toast.error('Failed to load pending reviews');
@@ -270,12 +284,14 @@ const AdminDashboard = () => {
   const loadDashboardData = async () => {
     try {
       setIsLoading(true);
-      const [analyticsData, activityData] = await Promise.all([
+      const [analyticsData, activityData, statsData] = await Promise.all([
         adminAPI.getAnalytics(),
-        adminAPI.getRecentActivity()
+        adminAPI.getRecentActivity(),
+        adminAPI.getApplicationStats()
       ]);
       setAnalytics(analyticsData);
       setRecentActivity(activityData);
+      setApplicationStats(statsData.data || {});
     } catch (error) {
       console.error('Error loading dashboard data:', error);
       toast.error('Failed to load dashboard data');
@@ -514,8 +530,8 @@ const AdminDashboard = () => {
         {/* Content Area */}
         <div className="space-y-8">
           {/* Debug Section - Remove in production */}
-          <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-4">
-            <h3 className="text-sm font-medium text-yellow-800 mb-2">🔧 Debug Info (Development)</h3>
+          {/* <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-4"> */}
+            {/* <h3 className="text-sm font-medium text-yellow-800 mb-2">🔧 Debug Info (Development)</h3>
             <div className="text-xs text-yellow-700 space-y-1">
               <div>Active Tab: {activeTab}</div>
               <div>Current Page: {currentPage}</div>
@@ -525,8 +541,8 @@ const AdminDashboard = () => {
               <div>Applications Count: {applications.length}</div>
               <div>Analytics: {Object.keys(analytics).length > 0 ? 'Loaded' : 'Not loaded'}</div>
               <div>Recent Activity: {recentActivity.length} items</div>
-            </div>
-          </div>
+            </div> */}
+          {/* </div> */}
 
           {/* Analytics Tab */}
           {activeTab === 'analytics' && (
@@ -556,7 +572,7 @@ const AdminDashboard = () => {
                 />
                 <StatCard
                   title="Pending Approvals"
-                  value={analytics.pendingApprovals || 0}
+                  value={(analytics.pendingApprovals || 0) + (applicationStats.pendingReview || 0) + (applicationStats.clientReview || 0)}
                   icon={FaShieldAlt}
                   color="bg-gradient-to-r from-orange-500 to-orange-600"
                   subtitle="Awaiting Review"
@@ -1079,22 +1095,56 @@ const AdminDashboard = () => {
                         </td>
                         <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">${app.budget?.toLocaleString() || 'Not specified'}</td>
                         <td className="px-6 py-4 whitespace-nowrap">
-                          <span className={`px-2 py-1 text-xs font-medium rounded-full ${
-                            app.status === 'employee_review' 
-                              ? 'bg-yellow-100 text-yellow-800' 
-                              : 'bg-green-100 text-green-800'
-                          }`}>
-                            Employee Review
-                          </span>
+                          {app.status === 'client_review' ? (
+                            <span className="px-2 py-1 text-xs font-medium rounded-full bg-blue-100 text-blue-800">Admin Final Approval</span>
+                          ) : (
+                            <span className="px-2 py-1 text-xs font-medium rounded-full bg-yellow-100 text-yellow-800">Employee Review</span>
+                          )}
                         </td>
                         <td className="px-6 py-4 whitespace-nowrap text-sm font-medium space-x-2">
-                          <button 
-                            onClick={() => openReviewModal(app)}
-                            className="text-blue-600 hover:text-blue-900 p-1 rounded hover:bg-blue-50"
-                            title="Review Application"
-                          >
-                            <FaClipboardCheck className="w-4 h-4" />
-                          </button>
+                          {app.status === 'client_review' ? (
+                            <div className="flex items-center space-x-2">
+                              <button
+                                onClick={async () => {
+                                  try {
+                                    await adminAPI.adminFinalApproval(app._id, 'approve');
+                                    toast.success('Application approved by admin');
+                                    await loadPendingReviews();
+                                    await loadApplicationStats();
+                                  } catch (e) {
+                                    console.error('Admin approval failed:', e);
+                                    toast.error(e.message || 'Admin approval failed');
+                                  }
+                                }}
+                                className="px-3 py-1 rounded-md bg-green-600 text-white hover:bg-green-700 transition-colors"
+                              >
+                                Approve
+                              </button>
+                              <button
+                                onClick={async () => {
+                                  try {
+                                    await adminAPI.adminFinalApproval(app._id, 'reject');
+                                    toast.success('Application rejected by admin');
+                                    await loadPendingReviews();
+                                    await loadApplicationStats();
+                                  } catch (e) {
+                                    console.error('Admin rejection failed:', e);
+                                    toast.error(e.message || 'Admin rejection failed');
+                                  }
+                                }}
+                                className="px-3 py-1 rounded-md bg-red-600 text-white hover:bg-red-700 transition-colors"
+                              >
+                                Reject
+                              </button>
+                            </div>
+                          ) : (
+                            <button 
+                              onClick={() => openReviewModal(app)}
+                              className="px-3 py-1 rounded-md bg-blue-600 text-white hover:bg-blue-700 transition-colors"
+                            >
+                              Review
+                            </button>
+                          )}
                         </td>
                       </tr>
                     ))}
