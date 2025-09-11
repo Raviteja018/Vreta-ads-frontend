@@ -56,14 +56,20 @@ export default function Navbar() {
           </NavLink>
         </div> */}
 
-        {/* Right: CTA Button */}
+        {/* Right: CTA Button and quick logins */}
         <div className="hidden md:flex items-center space-x-4">
-          {/* <NavLink
+          <NavLink
+            to="/employee/login"
+            className="text-gray-600 hover:text-green-600 font-medium px-3 py-2 transition-colors duration-200"
+          >
+            Employee Login
+          </NavLink>
+          <NavLink
             to="/admin/login"
             className="text-gray-600 hover:text-purple-600 font-medium px-3 py-2 transition-colors duration-200"
           >
-            Employee Login
-          </NavLink> */}
+            Admin Login
+          </NavLink>
           <NavLink
             to="/get-started"
             className="bg-gradient-to-r from-purple-500 to-indigo-500 text-white font-semibold px-5 py-2 rounded-lg hover:opacity-90"
